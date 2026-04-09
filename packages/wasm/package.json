@@ -1,13 +1,12 @@
 {
-    "name": "@breeztech/breez-sdk-spark",
-    "version": "0.1.0",
-    "description": "Breez Spark SDK",
-    "repository": "https://github.com/breez/spark-sdk",
-    "author": "Breez <contact@breez.technology> (https://github.com/breez)",
-    "homepage": "https://breez.technology",
+    "name": "@agicash/breez-sdk-spark",
+    "version": "0.12.2",
+    "description": "Fork of Breez Spark SDK with support for delegated Lightning invoices",
+    "repository": "https://github.com/MakePrisms/spark-sdk",
+    "author": "Agicash (https://github.com/MakePrisms)",
     "license": "MIT",
     "bugs": {
-      "url": "https://github.com/breez/spark-sdk/issues"
+      "url": "https://github.com/MakePrisms/spark-sdk/issues"
     },
     "files": [
       "bundler",
