@@ -90,10 +90,12 @@ func ReceiveHodlInvoicePayment(sdk *breez_sdk_spark.BreezSdk) error {
 	amountSats := uint64(50_000)
 	response, err := sdk.ReceivePayment(breez_sdk_spark.ReceivePaymentRequest{
 		PaymentMethod: breez_sdk_spark.ReceivePaymentMethodBolt11Invoice{
-			Description: "HODL invoice",
-			AmountSats:  &amountSats,
-			ExpirySecs:  nil,
-			PaymentHash: &paymentHash,
+			Description:            "HODL invoice",
+			AmountSats:             &amountSats,
+			ExpirySecs:             nil,
+			PaymentHash:            &paymentHash,
+			ReceiverIdentityPubkey: nil,
+			DescriptionHash:        nil,
 		},
 	})
 

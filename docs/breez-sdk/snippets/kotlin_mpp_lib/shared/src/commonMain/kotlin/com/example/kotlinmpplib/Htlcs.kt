@@ -74,7 +74,9 @@ class Htlcs {
                         description = "HODL invoice",
                         amountSats = 50_000u,
                         expirySecs = null,
-                        paymentHash = paymentHash
+                        paymentHash = paymentHash,
+                        receiverIdentityPubkey = null,
+                        descriptionHash = null
                     )
                 )
             )

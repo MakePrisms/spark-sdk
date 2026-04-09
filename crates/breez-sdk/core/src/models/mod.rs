@@ -1083,6 +1083,15 @@ pub enum ReceivePaymentMethod {
         /// The payer's HTLC will be held until the preimage is provided via
         /// `claim_htlc_payment` or the HTLC expires.
         payment_hash: Option<String>,
+        /// Hex-encoded compressed public key of the receiver. When set, creates a
+        /// delegated invoice — the SSP will route the payment to this identity
+        /// instead of the caller's wallet. Used for Lightning Address flows where
+        /// a server creates invoices on behalf of users.
+        receiver_identity_pubkey: Option<String>,
+        /// Hex-encoded SHA-256 hash for the invoice description hash tag (h tag).
+        /// Used by LNURL-pay to include the hash of the metadata string.
+        /// Mutually exclusive with `description` — when set, `description` is ignored.
+        description_hash: Option<String>,
     },
 }
 

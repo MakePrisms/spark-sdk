@@ -102,9 +102,18 @@ impl BreezSdk {
                 amount_sats,
                 expiry_secs,
                 payment_hash,
+                receiver_identity_pubkey,
+                description_hash,
             } => {
-                self.receive_bolt11_invoice(description, amount_sats, expiry_secs, payment_hash)
-                    .await
+                self.receive_bolt11_invoice(
+                    description,
+                    amount_sats,
+                    expiry_secs,
+                    payment_hash,
+                    receiver_identity_pubkey,
+                    description_hash,
+                )
+                .await
             }
         }
     }
@@ -425,16 +434,21 @@ impl BreezSdk {
         amount_sats: Option<u64>,
         expiry_secs: Option<u32>,
         payment_hash: Option<String>,
+        receiver_identity_pubkey: Option<String>,
+        description_hash: Option<String>,
     ) -> Result<ReceivePaymentResponse, SdkError> {
+        let public_key = parse_receiver_identity_pubkey(receiver_identity_pubkey)?;
+        let invoice_description = build_invoice_description(description, description_hash)?;
+
         let invoice = if let Some(payment_hash_hex) = payment_hash {
             let hash = sha256::Hash::from_str(&payment_hash_hex)
                 .map_err(|e| SdkError::InvalidInput(format!("Invalid payment hash: {e}")))?;
             self.spark_wallet
                 .create_hodl_lightning_invoice(
                     amount_sats.unwrap_or_default(),
-                    Some(InvoiceDescription::Memo(description.clone())),
+                    invoice_description,
                     hash,
-                    None,
+                    public_key,
                     expiry_secs,
                 )
                 .await?
@@ -443,8 +457,8 @@ impl BreezSdk {
             self.spark_wallet
                 .create_lightning_invoice(
                     amount_sats.unwrap_or_default(),
-                    Some(InvoiceDescription::Memo(description.clone())),
-                    None,
+                    invoice_description,
+                    public_key,
                     expiry_secs,
                     self.config.prefer_spark_over_lightning,
                 )
@@ -1439,5 +1453,104 @@ impl BreezSdk {
             )
             .await
             .map_err(Into::into)
+    }
+}
+
+fn parse_receiver_identity_pubkey(
+    receiver_identity_pubkey: Option<String>,
+) -> Result<Option<PublicKey>, SdkError> {
+    receiver_identity_pubkey
+        .map(|hex| {
+            PublicKey::from_str(&hex).map_err(|e| {
+                SdkError::InvalidInput(format!("Invalid receiver identity pubkey: {e}"))
+            })
+        })
+        .transpose()
+}
+
+fn build_invoice_description(
+    description: String,
+    description_hash: Option<String>,
+) -> Result<Option<InvoiceDescription>, SdkError> {
+    if let Some(hash_hex) = description_hash {
+        let hash_bytes = hex::decode(&hash_hex)
+            .map_err(|e| SdkError::InvalidInput(format!("Invalid description hash hex: {e}")))?;
+        let hash_array: [u8; 32] = hash_bytes
+            .try_into()
+            .map_err(|_| SdkError::InvalidInput("Description hash must be 32 bytes".to_string()))?;
+        Ok(Some(InvoiceDescription::DescriptionHash(hash_array)))
+    } else {
+        Ok(Some(InvoiceDescription::Memo(description)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_receiver_identity_pubkey_none() {
+        let result = parse_receiver_identity_pubkey(None).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_receiver_identity_pubkey_valid() {
+        // Valid compressed secp256k1 public key (33 bytes hex)
+        let valid_pubkey =
+            "02a1633cafcc01ebfb6d78e39f687a1f0995c62fc95f51ead10a02ee0be551b5dc".to_string();
+        let result = parse_receiver_identity_pubkey(Some(valid_pubkey)).unwrap();
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_parse_receiver_identity_pubkey_invalid_hex() {
+        let result = parse_receiver_identity_pubkey(Some("not-valid-hex".to_string()));
+        assert!(matches!(result, Err(SdkError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_parse_receiver_identity_pubkey_wrong_length() {
+        let result = parse_receiver_identity_pubkey(Some("02abcd".to_string()));
+        assert!(matches!(result, Err(SdkError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_build_invoice_description_memo_when_no_hash() {
+        let result = build_invoice_description("test memo".to_string(), None).unwrap();
+        assert!(matches!(result, Some(InvoiceDescription::Memo(m)) if m == "test memo"));
+    }
+
+    #[test]
+    fn test_build_invoice_description_hash_overrides_description() {
+        // SHA-256 of empty string (32 bytes = 64 hex chars)
+        let hash_hex =
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string();
+        let result = build_invoice_description(
+            "this description is ignored".to_string(),
+            Some(hash_hex.clone()),
+        )
+        .unwrap();
+
+        let expected_bytes = hex::decode(&hash_hex).unwrap();
+        assert!(
+            matches!(result, Some(InvoiceDescription::DescriptionHash(h)) if h == expected_bytes.as_slice())
+        );
+    }
+
+    #[test]
+    fn test_build_invoice_description_invalid_hex() {
+        let result = build_invoice_description("desc".to_string(), Some("zzzz".to_string()));
+        assert!(
+            matches!(result, Err(SdkError::InvalidInput(msg)) if msg.contains("Invalid description hash hex"))
+        );
+    }
+
+    #[test]
+    fn test_build_invoice_description_wrong_length() {
+        // Valid hex but only 16 bytes (32 hex chars) instead of 32 bytes (64 hex chars)
+        let short_hash = "abcd".repeat(8); // 32 hex chars = 16 bytes
+        let result = build_invoice_description("desc".to_string(), Some(short_hash));
+        assert!(matches!(result, Err(SdkError::InvalidInput(msg)) if msg.contains("32 bytes")));
     }
 }
