@@ -18,10 +18,12 @@ func ReceiveLightningBolt11(sdk *breez_sdk_spark.BreezSdk) (*breez_sdk_spark.Rec
 
 	request := breez_sdk_spark.ReceivePaymentRequest{
 		PaymentMethod: breez_sdk_spark.ReceivePaymentMethodBolt11Invoice{
-			Description: description,
-			AmountSats:  &optionalAmountSats,
-			ExpirySecs:  &optionalExpirySecs,
-			PaymentHash: nil,
+			Description:            description,
+			AmountSats:             &optionalAmountSats,
+			ExpirySecs:             &optionalExpirySecs,
+			PaymentHash:            nil,
+			ReceiverIdentityPubkey: nil,
+			DescriptionHash:        nil,
 		},
 	}
 

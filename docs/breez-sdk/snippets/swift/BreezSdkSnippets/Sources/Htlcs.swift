@@ -77,7 +77,9 @@ func receiveHodlInvoicePayment(sdk: BreezSdk) async throws {
                 description: "HODL invoice",
                 amountSats: 50_000,
                 expirySecs: nil,
-                paymentHash: paymentHash
+                paymentHash: paymentHash,
+                receiverIdentityPubkey: nil,
+                descriptionHash: nil
             )
         )
     )

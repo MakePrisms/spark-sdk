@@ -213,6 +213,8 @@ async fn test_02_lightning_idempotency_key(
                 amount_sats: Some(5),
                 expiry_secs: None,
                 payment_hash: None,
+                receiver_identity_pubkey: None,
+                description_hash: None,
             },
         })
         .await?
