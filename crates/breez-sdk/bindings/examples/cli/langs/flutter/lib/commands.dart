@@ -348,6 +348,8 @@ Future<void> _handleReceive(BreezSdk sdk, TokenIssuer tokenIssuer, List<String> 
         amountSats: amount,
         expirySecs: expirySecs,
         paymentHash: paymentHash,
+        receiverIdentityPubkey: null,
+        descriptionHash: null,
       );
     default:
       print('Invalid payment method: $method');

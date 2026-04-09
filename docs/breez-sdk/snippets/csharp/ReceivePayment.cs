@@ -17,7 +17,9 @@ namespace BreezSdkSnippets
                 description: description,
                 amountSats: optionalAmountSats,
                 expirySecs: optionalExpirySecs,
-                paymentHash: null
+                paymentHash: null,
+                receiverIdentityPubkey: null,
+                descriptionHash: null
             );
             var request = new ReceivePaymentRequest(paymentMethod: paymentMethod);
             var response = await sdk.ReceivePayment(request: request);

@@ -72,6 +72,8 @@ async def receive_hodl_invoice_payment(sdk: BreezSdk):
                 amount_sats=50_000,
                 expiry_secs=None,
                 payment_hash=payment_hash,
+                receiver_identity_pubkey=None,
+                description_hash=None,
             )
         )
     )

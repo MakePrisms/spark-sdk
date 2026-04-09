@@ -364,6 +364,8 @@ suspend fun handleReceive(sdk: BreezSdk, reader: LineReader, args: List<String>)
                 amountSats = amountSats,
                 expirySecs = expirySecs,
                 paymentHash = paymentHash,
+                receiverIdentityPubkey = null,
+                descriptionHash = null,
             )
         }
 

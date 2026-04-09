@@ -62,7 +62,9 @@ namespace BreezSdkSnippets
                         description: "HODL invoice",
                         amountSats: 50_000UL,
                         expirySecs: null,
-                        paymentHash: paymentHash
+                        paymentHash: paymentHash,
+                        receiverIdentityPubkey: null,
+                        descriptionHash: null
                     )
                 )
             );
