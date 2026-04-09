@@ -18,10 +18,16 @@
     "exports": {
       "./bundler": "./bundler/index.js",
       "./deno": "./deno/breez_sdk_spark_wasm.js",
-      "./nodejs": "./nodejs/index.js",
+      "./nodejs": {
+        "import": "./nodejs/index.mjs",
+        "require": "./nodejs/index.js"
+      },
       "./web": "./web/index.js",
       ".": {
-        "node": "./nodejs/index.js",
+        "node": {
+          "import": "./nodejs/index.mjs",
+          "require": "./nodejs/index.js"
+        },
         "deno": "./deno/breez_sdk_spark_wasm.js",
         "default": "./web/index.js"
       }
