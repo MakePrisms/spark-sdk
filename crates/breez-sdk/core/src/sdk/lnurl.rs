@@ -344,6 +344,8 @@ impl BreezSdk {
                     amount_sats: Some(amount_sats),
                     expiry_secs: None,
                     payment_hash: None,
+                    receiver_identity_pubkey: None,
+                    description_hash: None,
                 },
             })
             .await?

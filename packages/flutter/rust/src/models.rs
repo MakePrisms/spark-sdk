@@ -410,6 +410,8 @@ pub enum _ReceivePaymentMethod {
         amount_sats: Option<u64>,
         expiry_secs: Option<u32>,
         payment_hash: Option<String>,
+        receiver_identity_pubkey: Option<String>,
+        description_hash: Option<String>,
     },
 }
 

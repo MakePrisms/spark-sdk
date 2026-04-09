@@ -350,6 +350,8 @@ func handleReceive(sdk *breez_sdk_spark.BreezSdk, _ *readline.Instance, args []s
 
 			pm.PaymentHash = &paymentHash
 		}
+		pm.ReceiverIdentityPubkey = nil
+		pm.DescriptionHash = nil
 		paymentMethod = pm
 
 	default:
