@@ -1162,18 +1162,22 @@ pub struct ReceivePaymentResponse {
     /// Fee to pay to receive the payment
     /// Denominated in sats or token base units
     pub fee: u128,
-    /// The SSP-assigned receive request ID (only set for Bolt11 invoices)
+    /// Details from the SSP lightning receive request (only set for Bolt11 invoices)
     #[cfg_attr(feature = "uniffi", uniffi(default = None))]
-    pub receive_request_id: Option<String>,
-    /// The receive request status (only set for Bolt11 invoices)
-    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
-    pub status: Option<String>,
-    /// Timestamp when the receive request was created (only set for Bolt11 invoices)
-    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
-    pub created_at: Option<i64>,
-    /// Timestamp when the receive request was last updated (only set for Bolt11 invoices)
-    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
-    pub updated_at: Option<i64>,
+    pub lightning_receive_details: Option<LightningReceiveDetails>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct LightningReceiveDetails {
+    /// The SSP-assigned receive request ID
+    pub receive_request_id: String,
+    /// The receive request status
+    pub status: String,
+    /// Timestamp when the receive request was created
+    pub created_at: i64,
+    /// Timestamp when the receive request was last updated
+    pub updated_at: i64,
 }
 
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]

@@ -18,10 +18,10 @@ use crate::{
     error::SdkError,
     events::SdkEvent,
     models::{
-        ConversionStatus, ListPaymentsRequest, ListPaymentsResponse, Payment, PaymentDetails,
-        PrepareSendPaymentRequest, PrepareSendPaymentResponse, ReceivePaymentMethod,
-        ReceivePaymentRequest, ReceivePaymentResponse, SendPaymentRequest, SendPaymentResponse,
-        conversion_steps_from_payments,
+        ConversionStatus, LightningReceiveDetails, ListPaymentsRequest, ListPaymentsResponse,
+        Payment, PaymentDetails, PrepareSendPaymentRequest, PrepareSendPaymentResponse,
+        ReceivePaymentMethod, ReceivePaymentRequest, ReceivePaymentResponse, SendPaymentRequest,
+        SendPaymentResponse, conversion_steps_from_payments,
     },
     persist::PaymentMetadata,
     token_conversion::{
@@ -61,10 +61,7 @@ impl BreezSdk {
                     .map_err(|e| {
                         SdkError::Generic(format!("Failed to convert Spark address to string: {e}"))
                     })?,
-                receive_request_id: None,
-                status: None,
-                created_at: None,
-                updated_at: None,
+                lightning_receive_details: None,
             }),
             ReceivePaymentMethod::SparkInvoice {
                 amount,
@@ -92,10 +89,7 @@ impl BreezSdk {
                 Ok(ReceivePaymentResponse {
                     fee: 0,
                     payment_request: invoice,
-                    receive_request_id: None,
-                    status: None,
-                    created_at: None,
-                    updated_at: None,
+                    lightning_receive_details: None,
                 })
             }
             ReceivePaymentMethod::BitcoinAddress { new_address } => {
@@ -104,10 +98,7 @@ impl BreezSdk {
                 Ok(ReceivePaymentResponse {
                     payment_request: address,
                     fee: 0,
-                    receive_request_id: None,
-                    status: None,
-                    created_at: None,
-                    updated_at: None,
+                    lightning_receive_details: None,
                 })
             }
             ReceivePaymentMethod::Bolt11Invoice {
@@ -581,10 +572,12 @@ impl BreezSdk {
         Ok(ReceivePaymentResponse {
             payment_request: receive_payment.invoice,
             fee: 0,
-            receive_request_id: Some(receive_payment.id),
-            status: Some(format!("{:?}", receive_payment.status)),
-            created_at: Some(receive_payment.created_at),
-            updated_at: Some(receive_payment.updated_at),
+            lightning_receive_details: Some(LightningReceiveDetails {
+                receive_request_id: receive_payment.id,
+                status: format!("{:?}", receive_payment.status),
+                created_at: receive_payment.created_at,
+                updated_at: receive_payment.updated_at,
+            }),
         })
     }
 
