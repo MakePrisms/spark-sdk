@@ -450,10 +450,15 @@ pub struct _ReceivePaymentRequest {
 pub struct _ReceivePaymentResponse {
     pub payment_request: String,
     pub fee: u128,
-    pub receive_request_id: Option<String>,
-    pub status: Option<String>,
-    pub created_at: Option<i64>,
-    pub updated_at: Option<i64>,
+    pub lightning_receive_details: Option<LightningReceiveDetails>,
+}
+
+#[frb(mirror(LightningReceiveDetails))]
+pub struct _LightningReceiveDetails {
+    pub receive_request_id: String,
+    pub status: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[frb(mirror(RefundDepositRequest))]
