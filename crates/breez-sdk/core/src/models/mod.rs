@@ -1162,6 +1162,18 @@ pub struct ReceivePaymentResponse {
     /// Fee to pay to receive the payment
     /// Denominated in sats or token base units
     pub fee: u128,
+    /// The SSP-assigned receive request ID (only set for Bolt11 invoices)
+    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+    pub receive_request_id: Option<String>,
+    /// The receive request status (only set for Bolt11 invoices)
+    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+    pub status: Option<String>,
+    /// Timestamp when the receive request was created (only set for Bolt11 invoices)
+    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+    pub created_at: Option<i64>,
+    /// Timestamp when the receive request was last updated (only set for Bolt11 invoices)
+    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+    pub updated_at: Option<i64>,
 }
 
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
@@ -1498,6 +1510,35 @@ pub struct GetPaymentRequest {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GetPaymentResponse {
     pub payment: Payment,
+}
+
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetLightningReceiveRequestRequest {
+    pub request_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetLightningReceiveRequestResponse {
+    pub id: String,
+    pub status: String,
+    pub invoice: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub transfer_id: Option<String>,
+    pub transfer_amount_sat: Option<u64>,
+    pub payment_preimage: Option<String>,
+}
+
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetPaymentByInvoiceRequest {
+    pub invoice: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetPaymentByInvoiceResponse {
+    pub payment: Option<Payment>,
 }
 
 #[cfg_attr(feature = "uniffi", uniffi::export(callback_interface))]

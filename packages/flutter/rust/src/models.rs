@@ -212,6 +212,33 @@ pub struct _GetPaymentResponse {
     pub payment: Payment,
 }
 
+#[frb(mirror(GetLightningReceiveRequestRequest))]
+pub struct _GetLightningReceiveRequestRequest {
+    pub request_id: String,
+}
+
+#[frb(mirror(GetLightningReceiveRequestResponse))]
+pub struct _GetLightningReceiveRequestResponse {
+    pub id: String,
+    pub status: String,
+    pub invoice: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub transfer_id: Option<String>,
+    pub transfer_amount_sat: Option<u64>,
+    pub payment_preimage: Option<String>,
+}
+
+#[frb(mirror(GetPaymentByInvoiceRequest))]
+pub struct _GetPaymentByInvoiceRequest {
+    pub invoice: String,
+}
+
+#[frb(mirror(GetPaymentByInvoiceResponse))]
+pub struct _GetPaymentByInvoiceResponse {
+    pub payment: Option<Payment>,
+}
+
 #[frb(mirror(InputType))]
 pub enum _InputType {
     BitcoinAddress(BitcoinAddressDetails),
@@ -424,6 +451,10 @@ pub struct _ReceivePaymentRequest {
 pub struct _ReceivePaymentResponse {
     pub payment_request: String,
     pub fee: u128,
+    pub receive_request_id: Option<String>,
+    pub status: Option<String>,
+    pub created_at: Option<i64>,
+    pub updated_at: Option<i64>,
 }
 
 #[frb(mirror(RefundDepositRequest))]
