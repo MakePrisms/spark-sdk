@@ -10,10 +10,11 @@ use tracing::{Instrument, error, info, warn};
 use crate::{
     BitcoinAddressDetails, Bolt11InvoiceDetails, ClaimHtlcPaymentRequest, ClaimHtlcPaymentResponse,
     ConversionEstimate, ConversionOptions, ConversionPurpose, ConversionType, FeePolicy,
-    FetchConversionLimitsRequest, FetchConversionLimitsResponse, GetPaymentRequest,
-    GetPaymentResponse, InputType, OnchainConfirmationSpeed, PaymentStatus, SendOnchainFeeQuote,
-    SendPaymentMethod, SendPaymentOptions, SparkHtlcOptions, SparkInvoiceDetails,
-    WaitForPaymentIdentifier,
+    FetchConversionLimitsRequest, FetchConversionLimitsResponse, GetLightningReceiveRequestRequest,
+    GetLightningReceiveRequestResponse, GetPaymentByInvoiceRequest, GetPaymentByInvoiceResponse,
+    GetPaymentRequest, GetPaymentResponse, InputType, OnchainConfirmationSpeed, PaymentStatus,
+    SendOnchainFeeQuote, SendPaymentMethod, SendPaymentOptions, SparkHtlcOptions,
+    SparkInvoiceDetails, WaitForPaymentIdentifier,
     error::SdkError,
     events::SdkEvent,
     models::{
@@ -60,6 +61,10 @@ impl BreezSdk {
                     .map_err(|e| {
                         SdkError::Generic(format!("Failed to convert Spark address to string: {e}"))
                     })?,
+                receive_request_id: None,
+                status: None,
+                created_at: None,
+                updated_at: None,
             }),
             ReceivePaymentMethod::SparkInvoice {
                 amount,
@@ -87,6 +92,10 @@ impl BreezSdk {
                 Ok(ReceivePaymentResponse {
                     fee: 0,
                     payment_request: invoice,
+                    receive_request_id: None,
+                    status: None,
+                    created_at: None,
+                    updated_at: None,
                 })
             }
             ReceivePaymentMethod::BitcoinAddress { new_address } => {
@@ -95,6 +104,10 @@ impl BreezSdk {
                 Ok(ReceivePaymentResponse {
                     payment_request: address,
                     fee: 0,
+                    receive_request_id: None,
+                    status: None,
+                    created_at: None,
+                    updated_at: None,
                 })
             }
             ReceivePaymentMethod::Bolt11Invoice {
@@ -424,6 +437,38 @@ impl BreezSdk {
 
         Ok(GetPaymentResponse { payment })
     }
+
+    pub async fn get_lightning_receive_request(
+        &self,
+        request: GetLightningReceiveRequestRequest,
+    ) -> Result<Option<GetLightningReceiveRequestResponse>, SdkError> {
+        let receive_payment = self
+            .spark_wallet
+            .fetch_lightning_receive_payment(&request.request_id)
+            .await?;
+
+        Ok(
+            receive_payment.map(|rp| GetLightningReceiveRequestResponse {
+                id: rp.id,
+                status: format!("{:?}", rp.status),
+                invoice: rp.invoice,
+                created_at: rp.created_at,
+                updated_at: rp.updated_at,
+                transfer_id: rp.transfer_id.map(|id| id.to_string()),
+                transfer_amount_sat: rp.transfer_amount_sat,
+                payment_preimage: rp.payment_preimage,
+            }),
+        )
+    }
+
+    pub async fn get_payment_by_invoice(
+        &self,
+        request: GetPaymentByInvoiceRequest,
+    ) -> Result<GetPaymentByInvoiceResponse, SdkError> {
+        let payment = self.storage.get_payment_by_invoice(request.invoice).await?;
+
+        Ok(GetPaymentByInvoiceResponse { payment })
+    }
 }
 
 // Private payment methods
@@ -440,7 +485,7 @@ impl BreezSdk {
         let public_key = parse_receiver_identity_pubkey(receiver_identity_pubkey)?;
         let invoice_description = build_invoice_description(description, description_hash)?;
 
-        let invoice = if let Some(payment_hash_hex) = payment_hash {
+        let receive_payment = if let Some(payment_hash_hex) = payment_hash {
             let hash = sha256::Hash::from_str(&payment_hash_hex)
                 .map_err(|e| SdkError::InvalidInput(format!("Invalid payment hash: {e}")))?;
             self.spark_wallet
@@ -452,7 +497,6 @@ impl BreezSdk {
                     expiry_secs,
                 )
                 .await?
-                .invoice
         } else {
             self.spark_wallet
                 .create_lightning_invoice(
@@ -463,11 +507,14 @@ impl BreezSdk {
                     self.config.prefer_spark_over_lightning,
                 )
                 .await?
-                .invoice
         };
         Ok(ReceivePaymentResponse {
-            payment_request: invoice,
+            payment_request: receive_payment.invoice,
             fee: 0,
+            receive_request_id: Some(receive_payment.id),
+            status: Some(format!("{:?}", receive_payment.status)),
+            created_at: Some(receive_payment.created_at),
+            updated_at: Some(receive_payment.updated_at),
         })
     }
 
