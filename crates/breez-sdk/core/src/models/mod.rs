@@ -1410,6 +1410,22 @@ pub struct SendPaymentRequest {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct SendPaymentResponse {
     pub payment: Payment,
+    /// Details from the SSP lightning send request (only set for Bolt11 invoices sent via Lightning)
+    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+    pub lightning_send_details: Option<LightningSendDetails>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct LightningSendDetails {
+    /// The SSP-assigned send request ID
+    pub send_request_id: String,
+    /// The send request status
+    pub status: String,
+    /// Timestamp when the send request was created
+    pub created_at: i64,
+    /// Timestamp when the send request was last updated
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Clone)]

@@ -952,6 +952,15 @@ pub struct SendPaymentRequest {
 #[macros::extern_wasm_bindgen(breez_sdk_spark::SendPaymentResponse)]
 pub struct SendPaymentResponse {
     pub payment: Payment,
+    pub lightning_send_details: Option<LightningSendDetails>,
+}
+
+#[macros::extern_wasm_bindgen(breez_sdk_spark::LightningSendDetails)]
+pub struct LightningSendDetails {
+    pub send_request_id: String,
+    pub status: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[macros::extern_wasm_bindgen(breez_sdk_spark::PaymentDetailsFilter)]
