@@ -505,7 +505,7 @@ impl BreezSdk {
             fee: 0,
             lightning_receive_details: Some(LightningReceiveDetails {
                 receive_request_id: receive_payment.id,
-                status: format!("{:?}", receive_payment.status),
+                status: receive_payment.status.into(),
                 created_at: receive_payment.created_at,
                 updated_at: receive_payment.updated_at,
             }),
@@ -1161,7 +1161,7 @@ impl BreezSdk {
                 let ssp_id = lightning_payment.id.clone();
                 let details = LightningSendDetails {
                     send_request_id: lightning_payment.id.clone(),
-                    status: format!("{:?}", lightning_payment.status),
+                    status: lightning_payment.status.into(),
                     created_at: lightning_payment.created_at,
                     updated_at: lightning_payment.updated_at,
                 };

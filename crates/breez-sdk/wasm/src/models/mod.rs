@@ -834,9 +834,29 @@ pub struct ReceivePaymentResponse {
 #[macros::extern_wasm_bindgen(breez_sdk_spark::LightningReceiveDetails)]
 pub struct LightningReceiveDetails {
     pub receive_request_id: String,
-    pub status: String,
+    pub status: LightningReceiveStatus,
     pub created_at: i64,
     pub updated_at: i64,
+}
+
+#[macros::extern_wasm_bindgen(breez_sdk_spark::LightningReceiveStatus)]
+pub enum LightningReceiveStatus {
+    InvoiceCreated,
+    HtlcReceived,
+    TransferCreated,
+    TransferCreationFailed,
+    PaymentPreimagePending,
+    PaymentPreimageRecovered,
+    PaymentPreimageQueryingFailed,
+    PaymentPreimageRecoveringFailed,
+    TransferCanceled,
+    HtlcFailed,
+    LightningPaymentReceived,
+    TransferFailed,
+    TransferCompleted,
+    RefundSigningCommitmentsQueryingFailed,
+    RefundSigningFailed,
+    Unknown,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -957,9 +977,27 @@ pub struct SendPaymentResponse {
 #[macros::extern_wasm_bindgen(breez_sdk_spark::LightningSendDetails)]
 pub struct LightningSendDetails {
     pub send_request_id: String,
-    pub status: String,
+    pub status: LightningSendStatus,
     pub created_at: i64,
     pub updated_at: i64,
+}
+
+#[macros::extern_wasm_bindgen(breez_sdk_spark::LightningSendStatus)]
+pub enum LightningSendStatus {
+    Created,
+    UserTransferValidationFailed,
+    LightningPaymentInitiated,
+    LightningPaymentFailed,
+    LightningPaymentSucceeded,
+    PreimageProvided,
+    PreimageProvidingFailed,
+    TransferCompleted,
+    TransferFailed,
+    PendingUserSwapReturn,
+    UserSwapReturned,
+    UserSwapReturnFailed,
+    RequestValidated,
+    Unknown,
 }
 
 #[macros::extern_wasm_bindgen(breez_sdk_spark::PaymentDetailsFilter)]

@@ -1173,11 +1173,62 @@ pub struct LightningReceiveDetails {
     /// The SSP-assigned receive request ID
     pub receive_request_id: String,
     /// The receive request status
-    pub status: String,
+    pub status: LightningReceiveStatus,
     /// Timestamp when the receive request was created
     pub created_at: i64,
     /// Timestamp when the receive request was last updated
     pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum LightningReceiveStatus {
+    InvoiceCreated,
+    HtlcReceived,
+    TransferCreated,
+    TransferCreationFailed,
+    PaymentPreimagePending,
+    PaymentPreimageRecovered,
+    PaymentPreimageQueryingFailed,
+    PaymentPreimageRecoveringFailed,
+    TransferCanceled,
+    HtlcFailed,
+    LightningPaymentReceived,
+    TransferFailed,
+    TransferCompleted,
+    RefundSigningCommitmentsQueryingFailed,
+    RefundSigningFailed,
+    Unknown,
+}
+
+impl From<spark_wallet::LightningReceiveRequestStatus> for LightningReceiveStatus {
+    fn from(value: spark_wallet::LightningReceiveRequestStatus) -> Self {
+        use spark_wallet::LightningReceiveRequestStatus as S;
+        match value {
+            S::InvoiceCreated => LightningReceiveStatus::InvoiceCreated,
+            S::HtlcReceived => LightningReceiveStatus::HtlcReceived,
+            S::TransferCreated => LightningReceiveStatus::TransferCreated,
+            S::TransferCreationFailed => LightningReceiveStatus::TransferCreationFailed,
+            S::PaymentPreimagePending => LightningReceiveStatus::PaymentPreimagePending,
+            S::PaymentPreimageRecovered => LightningReceiveStatus::PaymentPreimageRecovered,
+            S::PaymentPreimageQueryingFailed => {
+                LightningReceiveStatus::PaymentPreimageQueryingFailed
+            }
+            S::PaymentPreimageRecoveringFailed => {
+                LightningReceiveStatus::PaymentPreimageRecoveringFailed
+            }
+            S::TransferCanceled => LightningReceiveStatus::TransferCanceled,
+            S::HtlcFailed => LightningReceiveStatus::HtlcFailed,
+            S::LightningPaymentReceived => LightningReceiveStatus::LightningPaymentReceived,
+            S::TransferFailed => LightningReceiveStatus::TransferFailed,
+            S::TransferCompleted => LightningReceiveStatus::TransferCompleted,
+            S::RefundSigningCommitmentsQueryingFailed => {
+                LightningReceiveStatus::RefundSigningCommitmentsQueryingFailed
+            }
+            S::RefundSigningFailed => LightningReceiveStatus::RefundSigningFailed,
+            S::Unknown => LightningReceiveStatus::Unknown,
+        }
+    }
 }
 
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
@@ -1412,11 +1463,52 @@ pub struct LightningSendDetails {
     /// The SSP-assigned send request ID
     pub send_request_id: String,
     /// The send request status
-    pub status: String,
+    pub status: LightningSendStatus,
     /// Timestamp when the send request was created
     pub created_at: i64,
     /// Timestamp when the send request was last updated
     pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum LightningSendStatus {
+    Created,
+    UserTransferValidationFailed,
+    LightningPaymentInitiated,
+    LightningPaymentFailed,
+    LightningPaymentSucceeded,
+    PreimageProvided,
+    PreimageProvidingFailed,
+    TransferCompleted,
+    TransferFailed,
+    PendingUserSwapReturn,
+    UserSwapReturned,
+    UserSwapReturnFailed,
+    RequestValidated,
+    Unknown,
+}
+
+impl From<spark_wallet::LightningSendStatus> for LightningSendStatus {
+    fn from(value: spark_wallet::LightningSendStatus) -> Self {
+        use spark_wallet::LightningSendStatus as S;
+        match value {
+            S::Created => LightningSendStatus::Created,
+            S::UserTransferValidationFailed => LightningSendStatus::UserTransferValidationFailed,
+            S::LightningPaymentInitiated => LightningSendStatus::LightningPaymentInitiated,
+            S::LightningPaymentFailed => LightningSendStatus::LightningPaymentFailed,
+            S::LightningPaymentSucceeded => LightningSendStatus::LightningPaymentSucceeded,
+            S::PreimageProvided => LightningSendStatus::PreimageProvided,
+            S::PreimageProvidingFailed => LightningSendStatus::PreimageProvidingFailed,
+            S::TransferCompleted => LightningSendStatus::TransferCompleted,
+            S::TransferFailed => LightningSendStatus::TransferFailed,
+            S::PendingUserSwapReturn => LightningSendStatus::PendingUserSwapReturn,
+            S::UserSwapReturned => LightningSendStatus::UserSwapReturned,
+            S::UserSwapReturnFailed => LightningSendStatus::UserSwapReturnFailed,
+            S::RequestValidated => LightningSendStatus::RequestValidated,
+            S::Unknown => LightningSendStatus::Unknown,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
