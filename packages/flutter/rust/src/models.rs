@@ -543,6 +543,15 @@ pub struct _SendPaymentRequest {
 #[frb(mirror(SendPaymentResponse))]
 pub struct _SendPaymentResponse {
     pub payment: Payment,
+    pub lightning_send_details: Option<LightningSendDetails>,
+}
+
+#[frb(mirror(LightningSendDetails))]
+pub struct _LightningSendDetails {
+    pub send_request_id: String,
+    pub status: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[frb(mirror(SignMessageRequest))]
