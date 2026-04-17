@@ -10,16 +10,18 @@ use tracing::{Instrument, error, info, warn};
 use crate::{
     BitcoinAddressDetails, Bolt11InvoiceDetails, ClaimHtlcPaymentRequest, ClaimHtlcPaymentResponse,
     ConversionEstimate, ConversionOptions, ConversionPurpose, ConversionType, FeePolicy,
-    FetchConversionLimitsRequest, FetchConversionLimitsResponse, GetPaymentRequest,
-    GetPaymentResponse, InputType, OnchainConfirmationSpeed, PaymentStatus, SendOnchainFeeQuote,
-    SendPaymentMethod, SendPaymentOptions, SparkHtlcOptions, SparkInvoiceDetails,
-    WaitForPaymentIdentifier,
+    FetchConversionLimitsRequest, FetchConversionLimitsResponse, GetLightningReceiveRequestRequest,
+    GetLightningReceiveRequestResponse, GetPaymentByInvoiceRequest, GetPaymentByInvoiceResponse,
+    GetPaymentRequest, GetPaymentResponse, InputType, OnchainConfirmationSpeed, PaymentStatus,
+    SendOnchainFeeQuote, SendPaymentMethod, SendPaymentOptions, SparkHtlcOptions,
+    SparkInvoiceDetails, WaitForPaymentIdentifier,
     error::SdkError,
     events::SdkEvent,
     models::{
-        ConversionStatus, ListPaymentsRequest, ListPaymentsResponse, Payment, PaymentDetails,
-        PrepareSendPaymentRequest, PrepareSendPaymentResponse, ReceivePaymentMethod,
-        ReceivePaymentRequest, ReceivePaymentResponse, SendPaymentRequest, SendPaymentResponse,
+        ConversionStatus, LightningReceiveDetails, LightningSendDetails, ListPaymentsRequest,
+        ListPaymentsResponse, Payment, PaymentDetails, PrepareSendPaymentRequest,
+        PrepareSendPaymentResponse, ReceivePaymentMethod, ReceivePaymentRequest,
+        ReceivePaymentResponse, SendPaymentRequest, SendPaymentResponse,
         conversion_steps_from_payments,
     },
     persist::PaymentMetadata,
@@ -60,6 +62,7 @@ impl BreezSdk {
                     .map_err(|e| {
                         SdkError::Generic(format!("Failed to convert Spark address to string: {e}"))
                     })?,
+                lightning_receive_details: None,
             }),
             ReceivePaymentMethod::SparkInvoice {
                 amount,
@@ -87,6 +90,7 @@ impl BreezSdk {
                 Ok(ReceivePaymentResponse {
                     fee: 0,
                     payment_request: invoice,
+                    lightning_receive_details: None,
                 })
             }
             ReceivePaymentMethod::BitcoinAddress { new_address } => {
@@ -95,6 +99,7 @@ impl BreezSdk {
                 Ok(ReceivePaymentResponse {
                     payment_request: address,
                     fee: 0,
+                    lightning_receive_details: None,
                 })
             }
             ReceivePaymentMethod::Bolt11Invoice {
@@ -424,6 +429,38 @@ impl BreezSdk {
 
         Ok(GetPaymentResponse { payment })
     }
+
+    pub async fn get_lightning_receive_request(
+        &self,
+        request: GetLightningReceiveRequestRequest,
+    ) -> Result<Option<GetLightningReceiveRequestResponse>, SdkError> {
+        let receive_payment = self
+            .spark_wallet
+            .fetch_lightning_receive_payment(&request.request_id)
+            .await?;
+
+        Ok(
+            receive_payment.map(|rp| GetLightningReceiveRequestResponse {
+                id: rp.id,
+                status: rp.status.into(),
+                invoice: rp.invoice,
+                created_at: rp.created_at,
+                updated_at: rp.updated_at,
+                transfer_id: rp.transfer_id.map(|id| id.to_string()),
+                transfer_amount_sat: rp.transfer_amount_sat,
+                payment_preimage: rp.payment_preimage,
+            }),
+        )
+    }
+
+    pub async fn get_payment_by_invoice(
+        &self,
+        request: GetPaymentByInvoiceRequest,
+    ) -> Result<GetPaymentByInvoiceResponse, SdkError> {
+        let payment = self.storage.get_payment_by_invoice(request.invoice).await?;
+
+        Ok(GetPaymentByInvoiceResponse { payment })
+    }
 }
 
 // Private payment methods
@@ -440,7 +477,7 @@ impl BreezSdk {
         let public_key = parse_receiver_identity_pubkey(receiver_identity_pubkey)?;
         let invoice_description = build_invoice_description(description, description_hash)?;
 
-        let invoice = if let Some(payment_hash_hex) = payment_hash {
+        let receive_payment = if let Some(payment_hash_hex) = payment_hash {
             let hash = sha256::Hash::from_str(&payment_hash_hex)
                 .map_err(|e| SdkError::InvalidInput(format!("Invalid payment hash: {e}")))?;
             self.spark_wallet
@@ -452,7 +489,6 @@ impl BreezSdk {
                     expiry_secs,
                 )
                 .await?
-                .invoice
         } else {
             self.spark_wallet
                 .create_lightning_invoice(
@@ -463,11 +499,16 @@ impl BreezSdk {
                     self.config.prefer_spark_over_lightning,
                 )
                 .await?
-                .invoice
         };
         Ok(ReceivePaymentResponse {
-            payment_request: invoice,
+            payment_request: receive_payment.invoice,
             fee: 0,
+            lightning_receive_details: Some(LightningReceiveDetails {
+                receive_request_id: receive_payment.id,
+                status: receive_payment.status.into(),
+                created_at: receive_payment.created_at,
+                updated_at: receive_payment.updated_at,
+            }),
         })
     }
 
@@ -492,7 +533,10 @@ impl BreezSdk {
                 .get_payment_by_id(idempotency_key.clone())
                 .await
             {
-                return Ok(SendPaymentResponse { payment });
+                return Ok(SendPaymentResponse {
+                    payment,
+                    lightning_send_details: None,
+                });
             }
         }
         let conversion_estimate = request.prepare_response.conversion_estimate.clone();
@@ -737,7 +781,10 @@ impl BreezSdk {
         // For self-transfers, suppress the event and return
         if *conversion_purpose == ConversionPurpose::SelfTransfer {
             *suppress_payment_event = true;
-            return Ok(SendPaymentResponse { payment });
+            return Ok(SendPaymentResponse {
+                payment,
+                lightning_send_details: None,
+            });
         }
 
         // Now send the actual payment
@@ -775,9 +822,13 @@ impl BreezSdk {
             .await?;
 
         // Fetch the updated payment with conversion details
+        let lightning_send_details = response.lightning_send_details;
         get_payment_with_conversion_details(response.payment.id, self.storage.clone())
             .await
-            .map(|payment| SendPaymentResponse { payment })
+            .map(|payment| SendPaymentResponse {
+                payment,
+                lightning_send_details,
+            })
     }
 
     pub(super) async fn send_payment_internal(
@@ -878,7 +929,10 @@ impl BreezSdk {
         // Insert the payment into storage to make it immediately available for listing
         self.storage.insert_payment(payment.clone()).await?;
 
-        Ok(SendPaymentResponse { payment })
+        Ok(SendPaymentResponse {
+            payment,
+            lightning_send_details: None,
+        })
     }
 
     async fn send_spark_htlc(
@@ -918,7 +972,10 @@ impl BreezSdk {
         // Insert the payment into storage to make it immediately available for listing
         self.storage.insert_payment(payment.clone()).await?;
 
-        Ok(SendPaymentResponse { payment })
+        Ok(SendPaymentResponse {
+            payment,
+            lightning_send_details: None,
+        })
     }
 
     async fn send_spark_token_address(
@@ -978,7 +1035,10 @@ impl BreezSdk {
         // Insert the payment into storage to make it immediately available for listing
         self.storage.insert_payment(payment.clone()).await?;
 
-        Ok(SendPaymentResponse { payment })
+        Ok(SendPaymentResponse {
+            payment,
+            lightning_send_details: None,
+        })
     }
 
     /// For `FeesIncluded` + amountless Bolt11: calculates the amount to send
@@ -1096,9 +1156,15 @@ impl BreezSdk {
             ),
         )
         .await?;
-        let payment = match payment_response.lightning_payment {
+        let (payment, lightning_send_details) = match payment_response.lightning_payment {
             Some(lightning_payment) => {
                 let ssp_id = lightning_payment.id.clone();
+                let details = LightningSendDetails {
+                    send_request_id: lightning_payment.id.clone(),
+                    status: lightning_payment.status.into(),
+                    created_at: lightning_payment.created_at,
+                    updated_at: lightning_payment.updated_at,
+                };
                 let htlc_details = payment_response
                     .transfer
                     .htlc_preimage_request
@@ -1115,9 +1181,9 @@ impl BreezSdk {
                     htlc_details,
                 )?;
                 self.poll_lightning_send_payment(&payment, ssp_id);
-                payment
+                (payment, Some(details))
             }
-            None => payment_response.transfer.try_into()?,
+            None => (payment_response.transfer.try_into()?, None),
         };
 
         let completion_timeout_secs = completion_timeout_secs.unwrap_or(0);
@@ -1126,7 +1192,10 @@ impl BreezSdk {
             // Insert the payment into storage to make it immediately available for listing
             self.storage.insert_payment(payment.clone()).await?;
 
-            return Ok(SendPaymentResponse { payment });
+            return Ok(SendPaymentResponse {
+                payment,
+                lightning_send_details,
+            });
         }
 
         let payment = self
@@ -1140,7 +1209,10 @@ impl BreezSdk {
         // Insert the payment into storage to make it immediately available for listing
         self.storage.insert_payment(payment.clone()).await?;
 
-        Ok(SendPaymentResponse { payment })
+        Ok(SendPaymentResponse {
+            payment,
+            lightning_send_details,
+        })
     }
 
     async fn send_bitcoin_address(
@@ -1207,7 +1279,10 @@ impl BreezSdk {
 
         self.storage.insert_payment(payment.clone()).await?;
 
-        Ok(SendPaymentResponse { payment })
+        Ok(SendPaymentResponse {
+            payment,
+            lightning_send_details: None,
+        })
     }
 
     pub(super) async fn wait_for_payment(

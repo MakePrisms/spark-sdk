@@ -134,6 +134,20 @@ impl BreezSdk {
         self.inner.get_payment(request).await
     }
 
+    pub async fn get_lightning_receive_request(
+        &self,
+        request: GetLightningReceiveRequestRequest,
+    ) -> Result<Option<GetLightningReceiveRequestResponse>, SdkError> {
+        self.inner.get_lightning_receive_request(request).await
+    }
+
+    pub async fn get_payment_by_invoice(
+        &self,
+        request: GetPaymentByInvoiceRequest,
+    ) -> Result<GetPaymentByInvoiceResponse, SdkError> {
+        self.inner.get_payment_by_invoice(request).await
+    }
+
     pub async fn claim_deposit(
         &self,
         request: ClaimDepositRequest,
