@@ -512,7 +512,7 @@ impl BreezSdk {
         Ok(
             receive_payment.map(|rp| GetLightningReceiveRequestResponse {
                 id: rp.id,
-                status: format!("{:?}", rp.status),
+                status: rp.status.into(),
                 invoice: rp.invoice,
                 created_at: rp.created_at,
                 updated_at: rp.updated_at,
