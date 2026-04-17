@@ -1624,7 +1624,7 @@ pub struct GetLightningReceiveRequestRequest {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GetLightningReceiveRequestResponse {
     pub id: String,
-    pub status: String,
+    pub status: LightningReceiveStatus,
     pub invoice: String,
     pub created_at: i64,
     pub updated_at: i64,

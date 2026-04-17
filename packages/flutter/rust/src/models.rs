@@ -220,7 +220,7 @@ pub struct _GetLightningReceiveRequestRequest {
 #[frb(mirror(GetLightningReceiveRequestResponse))]
 pub struct _GetLightningReceiveRequestResponse {
     pub id: String,
-    pub status: String,
+    pub status: LightningReceiveStatus,
     pub invoice: String,
     pub created_at: i64,
     pub updated_at: i64,

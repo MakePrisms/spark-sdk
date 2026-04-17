@@ -1087,7 +1087,7 @@ pub struct GetLightningReceiveRequestRequest {
 #[macros::extern_wasm_bindgen(breez_sdk_spark::GetLightningReceiveRequestResponse)]
 pub struct GetLightningReceiveRequestResponse {
     pub id: String,
-    pub status: String,
+    pub status: LightningReceiveStatus,
     pub invoice: String,
     pub created_at: i64,
     pub updated_at: i64,
