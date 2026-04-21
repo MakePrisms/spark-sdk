@@ -1,6 +1,6 @@
 {
     "name": "@agicash/breez-sdk-spark",
-    "version": "0.13.2-dev3-rc-1",
+    "version": "0.13.2-dev5-rc-1",
     "description": "Fork of Breez Spark SDK with support for delegated Lightning invoices",
     "repository": "https://github.com/MakePrisms/spark-sdk",
     "author": "Agicash (https://github.com/MakePrisms)",
