@@ -21,6 +21,7 @@
       "./deno": "./deno/breez_sdk_spark_wasm.js",
       "./nodejs": "./nodejs/index.js",
       "./web": "./web/index.js",
+      "./web/wasm": "./web/breez_sdk_spark_wasm_bg.wasm",
       "./ssr": "./ssr/index.js",
       ".": {
         "node": {
