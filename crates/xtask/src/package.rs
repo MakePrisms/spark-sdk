@@ -133,6 +133,14 @@ fn package_wasm_cmd(wasm_package: WasmPackages) -> Result<()> {
         }
     }
 
+    // Remove ssr/.gitignore written by create_ssr_entry_point — its `*` entry
+    // causes npm publish to exclude the ssr/ contents from the tarball even
+    // though `files` lists the directory.
+    let ssr_gitignore = pkg_dir.join("ssr/.gitignore");
+    if ssr_gitignore.exists() {
+        fs::remove_file(&ssr_gitignore)?;
+    }
+
     // Run `yarn pack` in the pkg_dir after packaging WASM targets
     let status = Command::new("yarn")
         .arg("pack")
