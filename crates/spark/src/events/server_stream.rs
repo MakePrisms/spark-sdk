@@ -72,7 +72,7 @@ pub async fn subscribe_server_events(
                     break;
                 }
                 Err(e) => {
-                    error!("Error receiving event, reconnecting: {}", e);
+                    debug!("Error receiving event, reconnecting: {}", e);
                     break;
                 }
             };
@@ -146,6 +146,14 @@ pub async fn subscribe_server_events(
                 Event::Connected(_) => {
                     debug!("Received connected event");
                     SparkEvent::Connected
+                }
+                Event::Heartbeat(_) => {
+                    trace!("Received heartbeat event");
+                    continue;
+                }
+                Event::TokenTransaction(_) => {
+                    trace!("Received token transaction event");
+                    continue;
                 }
             };
 

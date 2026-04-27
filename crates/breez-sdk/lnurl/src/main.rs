@@ -31,7 +31,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 use x509_parser::prelude::{FromDer, X509Certificate};
 
 mod auth;
-mod background;
+mod domains;
 mod error;
 mod invoice_paid;
 mod postgresql;
@@ -41,6 +41,8 @@ mod sqlite;
 mod state;
 mod time;
 mod user;
+mod webhook_notify;
+mod webhooks;
 mod zap;
 
 #[derive(Clone, Parser, Debug, Serialize, Deserialize)]
@@ -104,6 +106,10 @@ struct Args {
     #[arg(long)]
     pub ca_cert: Option<String>,
 
+    /// URL to fetch a comma-separated certificate revocation list from.
+    #[arg(long)]
+    pub crl_url: Option<String>,
+
     /// Domain for the webhook URL registered with the SSP.
     #[arg(long)]
     pub webhook_domain: Option<String>,
@@ -112,6 +118,11 @@ struct Args {
     /// If not set, a random seed will be generated.
     #[arg(long)]
     pub ssp_auth_seed: Option<String>,
+
+    /// Number of days to keep webhook deliveries (both succeeded and failed)
+    /// for audit/debugging before they are cleaned up periodically.
+    #[arg(long, default_value = "90")]
+    pub webhook_delivery_ttl_days: u32,
 }
 
 #[tokio::main]
@@ -199,7 +210,7 @@ fn parse_auth_seed(hex_str: Option<&str>) -> [u8; 32] {
 #[allow(clippy::too_many_lines)]
 async fn run_server<DB>(args: Args, repository: DB) -> Result<(), anyhow::Error>
 where
-    DB: LnurlRepository + Clone + Send + Sync + 'static,
+    DB: LnurlRepository + webhooks::WebhookRepository + Clone + Send + Sync + 'static,
 {
     let auth_seed = parse_auth_seed(args.ssp_auth_seed.as_deref());
 
@@ -246,8 +257,7 @@ where
         debug!("ensured domain '{}' exists in database", domain);
     }
 
-    let domains: HashSet<String> = repository.list_domains().await?.into_iter().collect();
-    info!("loaded {} allowed domains from database", domains.len());
+    let domains = domains::start(repository.clone()).await?;
 
     let ca_cert = args
         .ca_cert
@@ -260,6 +270,20 @@ where
             Ok::<_, anyhow::Error>(ca_cert.as_raw().to_vec())
         })
         .transpose()?;
+
+    let crl: HashSet<String> = if let Some(url) = &args.crl_url {
+        let client = bitreq::Client::new(1);
+        let response = client
+            .send_async(bitreq::get(url))
+            .await
+            .map_err(|e| anyhow!("failed to fetch crl from {url}: {e:?}"))?;
+        let body = response
+            .as_str()
+            .map_err(|e| anyhow!("failed to read crl response body: {e:?}"))?;
+        body.split(',').map(str::to_string).collect()
+    } else {
+        HashSet::new()
+    };
 
     let nostr_keys = args
         .nsec
@@ -275,8 +299,29 @@ where
     // Create watch channel for triggering background processing
     let (invoice_paid_trigger, invoice_paid_rx) = watch::channel(());
 
-    // Start background processor for handling paid invoices.
-    background::start_background_processor(repository.clone(), nostr_keys.clone(), invoice_paid_rx);
+    // Create a shared HTTP client for webhook delivery (connection cache capacity —
+    // generous enough that connections to all webhook hosts stay warm).
+    let http_client = bitreq::Client::new(100);
+
+    let webhook_service = webhooks::WebhookService::new(repository.clone());
+
+    // Load webhook endpoint configs (domain → {url, secret}) and start
+    // a background refresher that keeps them in sync with the database.
+    let webhook_config_cache = webhooks::config::start(repository.clone()).await?;
+
+    // Start background processors.
+    zap::start_background_processor(
+        repository.clone(),
+        nostr_keys.as_ref(),
+        invoice_paid_rx.clone(),
+    );
+    webhooks::start_background_processor(
+        repository.clone(),
+        http_client,
+        invoice_paid_rx,
+        args.webhook_delivery_ttl_days,
+        webhook_config_cache,
+    );
 
     // Get or create a shared webhook secret persisted in the database.
     // All instances share the same secret so webhooks verify correctly
@@ -297,6 +342,7 @@ where
 
     let state = State {
         db: repository,
+        webhook_service,
         wallet,
         scheme: args.scheme,
         min_sendable: args.min_sendable,
@@ -314,6 +360,8 @@ where
         domains,
         nostr_keys,
         ca_cert,
+        crl_url: args.crl_url,
+        crl,
         connection_manager,
         coordinator,
         signer,
@@ -400,7 +448,7 @@ where
 fn register_webhook(service_provider: Arc<ServiceProvider>, webhook_url: String, secret: String) {
     tokio::spawn(async move {
         let mut delay = std::time::Duration::from_secs(1);
-        let max_delay = std::time::Duration::from_secs(60);
+        let max_delay = std::time::Duration::from_mins(1);
         loop {
             info!("registering webhook with SSP at {}", webhook_url);
             match service_provider

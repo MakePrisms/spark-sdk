@@ -12,7 +12,7 @@ use platform_utils::DefaultHttpClient;
 
 #[cfg(not(target_family = "wasm"))]
 use spark_wallet::Signer;
-use spark_wallet::{SparkWalletConfig, TokenOutputStore, TreeStore};
+use spark_wallet::{InMemorySessionManager, SparkWalletConfig, TokenOutputStore, TreeStore};
 use tokio::sync::watch;
 use tracing::{debug, info};
 
@@ -31,6 +31,7 @@ use crate::{
     persist::Storage,
     realtime_sync::{RealTimeSyncParams, init_and_start_real_time_sync},
     sdk::{BreezSdk, BreezSdkParams, SyncCoordinator},
+    session_manager::BreezSessionManager,
     signer::{
         breez::BreezSignerImpl, lnurl_auth::LnurlAuthSignerAdapter, rtsync::RTSyncSigner,
         spark::SparkSigner,
@@ -482,8 +483,15 @@ impl SdkBuilder {
             }
         };
 
+        let user_agent = format!(
+            "{}/{}",
+            crate::built_info::PKG_NAME,
+            crate::built_info::GIT_VERSION.unwrap_or(crate::built_info::PKG_VERSION),
+        );
+        info!("Building sdk with user agent: {}", user_agent);
+
         let breez_server = Arc::new(
-            BreezServer::new(PRODUCTION_BREEZSERVER_URL, None)
+            BreezServer::new(PRODUCTION_BREEZSERVER_URL, None, &user_agent)
                 .map_err(|e| SdkError::Generic(e.to_string()))?,
         );
 
@@ -496,12 +504,6 @@ impl SdkBuilder {
             Some(client) => client,
             None => Arc::new(DefaultHttpClient::default()),
         };
-        let user_agent = format!(
-            "{}/{}",
-            crate::built_info::PKG_NAME,
-            crate::built_info::GIT_VERSION.unwrap_or(crate::built_info::PKG_VERSION),
-        );
-        info!("Building SparkWallet with user agent: {}", user_agent);
         let mut spark_wallet_config = if let Some(env_config) = &self.config.spark_config {
             Self::build_spark_wallet_config(self.config.network.into(), env_config)?
         } else {
@@ -510,7 +512,7 @@ impl SdkBuilder {
         spark_wallet_config.operator_pool = spark_wallet_config
             .operator_pool
             .with_user_agent(Some(user_agent.clone()));
-        spark_wallet_config.service_provider_config.user_agent = Some(user_agent);
+        spark_wallet_config.service_provider_config.user_agent = Some(user_agent.clone());
         spark_wallet_config.leaf_auto_optimize_enabled =
             self.config.optimization_config.auto_enabled;
         spark_wallet_config.leaf_optimization_options.multiplicity =
@@ -543,9 +545,13 @@ impl SdkBuilder {
                 Some(crate::persist::postgres::create_postgres_token_store(pool.clone()).await?);
         }
 
+        let session_manager = Arc::new(BreezSessionManager::new(Arc::new(
+            InMemorySessionManager::default(),
+        )));
         let mut wallet_builder =
             spark_wallet::WalletBuilder::new(spark_wallet_config, spark_signer)
-                .with_cancellation_token(shutdown_sender.subscribe());
+                .with_cancellation_token(shutdown_sender.subscribe())
+                .with_session_manager(session_manager.clone());
         if let Some(observer) = self.payment_observer {
             let observer: Arc<dyn spark_wallet::TransferObserver> =
                 Arc::new(SparkTransferObserver::new(observer));
@@ -585,6 +591,7 @@ impl SdkBuilder {
             init_and_start_real_time_sync(RealTimeSyncParams {
                 server_url: server_url.clone(),
                 api_key: self.config.api_key.clone(),
+                user_agent,
                 signer: rtsync_signer,
                 storage: Arc::clone(&storage),
                 shutdown_receiver: shutdown_sender.subscribe(),
@@ -663,6 +670,7 @@ impl SdkBuilder {
             token_converter,
             stable_balance,
             sync_coordinator,
+            session_manager,
         })?;
         debug!("Initialized and started breez sdk.");
 

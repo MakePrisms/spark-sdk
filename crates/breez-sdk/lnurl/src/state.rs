@@ -4,18 +4,21 @@ use spark::session_manager::InMemorySessionManager;
 use spark::ssp::ServiceProvider;
 use spark_wallet::DefaultSigner;
 use std::{collections::HashSet, sync::Arc};
-use tokio::sync::{Mutex, watch};
+use tokio::sync::{Mutex, RwLock, watch};
 
 pub struct State<DB> {
     pub db: DB,
+    pub webhook_service: crate::webhooks::WebhookService<DB>,
     pub wallet: Arc<spark_wallet::SparkWallet>,
     pub scheme: String,
     pub min_sendable: u64,
     pub max_sendable: u64,
     pub include_spark_address: bool,
-    pub domains: HashSet<String>,
+    pub domains: Arc<RwLock<HashSet<String>>>,
     pub nostr_keys: Option<nostr::Keys>,
     pub ca_cert: Option<Vec<u8>>,
+    pub crl_url: Option<String>,
+    pub crl: HashSet<String>,
     pub connection_manager: Arc<dyn ConnectionManager>,
     pub coordinator: OperatorConfig,
     pub signer: Arc<DefaultSigner>,
@@ -33,14 +36,17 @@ where
     fn clone(&self) -> Self {
         Self {
             db: self.db.clone(),
+            webhook_service: self.webhook_service.clone(),
             wallet: Arc::clone(&self.wallet),
             scheme: self.scheme.clone(),
             min_sendable: self.min_sendable,
             max_sendable: self.max_sendable,
             include_spark_address: self.include_spark_address,
-            domains: self.domains.clone(),
+            domains: Arc::clone(&self.domains),
             nostr_keys: self.nostr_keys.clone(),
             ca_cert: self.ca_cert.clone(),
+            crl_url: self.crl_url.clone(),
+            crl: self.crl.clone(),
             connection_manager: self.connection_manager.clone(),
             coordinator: self.coordinator.clone(),
             signer: self.signer.clone(),

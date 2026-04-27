@@ -19,6 +19,7 @@ It’s a nodeless integration that offers a non-custodial, end-to-end solution f
 - [x] Send and receive via LNURL-pay & Lightning addresses 
 - [x] Send and receive Spark payments (BTC)
 - [x] Passkey login for seedless experience
+- [x] Stable Balance - hold your balance in USD
 - [x] Issue, send and receive Spark tokens (BTKN)
 - [x] On-chain interoperability
 - [x] Convert Spark tokens (BTKN) to bitcoin and vice versa 
@@ -54,6 +55,22 @@ Looking for a quick way to try the Breez SDK in the browser or as PWA? Check out
 - **Repo:** [breez/breez-sdk-spark-example](https://github.com/breez/breez-sdk-spark-example)  
 
 > **Note:** The demo is for demonstration purposes only and not intended for production use.
+
+## **Example Apps**
+
+The repository includes full working CLI example apps for every supported language, demonstrating end-to-end SDK usage.
+
+| Language | CLI Example App |
+|----------|-----------------|
+| Rust | [crates/breez-sdk/cli](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/cli) |
+| JavaScript/TypeScript | [cli/langs/wasm](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/wasm), [glow-web](https://github.com/breez/glow-web) |
+| Swift | [cli/langs/swift](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/swift) |
+| Kotlin | [cli/langs/kotlin-multiplatform](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/kotlin-multiplatform) |
+| Flutter/Dart | [cli/langs/flutter](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/flutter) |
+| Python | [cli/langs/python](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/python) |
+| Go | [cli/langs/golang](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/golang) |
+| React Native | [cli/langs/react-native](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/react-native) |
+| C# | [cli/langs/csharp](https://github.com/breez/spark-sdk/tree/main/crates/breez-sdk/bindings/examples/cli/langs/csharp) |
 
 ## **Support**
 
@@ -118,7 +135,7 @@ Contributions are always welcome. Please read our [contribution guide](CONTRIBUT
 - [x] Hodl invoice support
 - [x] Passkey login for seedless experience
 - [x] Contacts management 
-- [ ] Stable balance
+- [x] Stable balance
 - [ ] USDT send support
 - [ ] USDC send support
 - [ ] USDT receive support

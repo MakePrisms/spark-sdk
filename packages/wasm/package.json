@@ -13,6 +13,7 @@
       "deno",
       "nodejs",
       "web",
+      "ssr",
       "!examples"
     ],
     "exports": {
@@ -23,6 +24,7 @@
         "require": "./nodejs/index.js"
       },
       "./web": "./web/index.js",
+      "./ssr": "./ssr/index.js",
       ".": {
         "node": {
           "import": "./nodejs/index.mjs",

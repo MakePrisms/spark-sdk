@@ -210,6 +210,7 @@ impl GraphQLClient {
                 .map_err(|_| {
                     GraphQLError::Authentication("Invalid expiration timestamp".to_string())
                 })?,
+            headers: HashMap::new(),
         })
     }
 

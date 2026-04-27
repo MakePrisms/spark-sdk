@@ -26,23 +26,23 @@ use spark::{
     },
     services::{
         CoopExitFeeQuote, CoopExitParams, CoopExitService, CpfpUtxo, DepositService, ExitSpeed,
-        Fee, FreezeIssuerTokenResponse, HtlcService, InvoiceDescription, LeafOptimizer,
-        LeafTxCpfpPsbts, LightningReceivePayment, LightningSendPayment, LightningService,
-        OptimizationEvent, OptimizationEventHandler, OptimizationProgress, Preimage,
+        Fee, FreezeIssuerTokenResponse, HtlcService, InvoiceDescription, LeafTxCpfpPsbts,
+        LightningReceivePayment, LightningSendPayment, LightningService, Preimage,
         PreimageRequestStatus, PreimageRequestWithTransfer, QueryHtlcFilter,
         QueryTokenTransactionsFilter, ServiceError, StaticDepositQuote, Swap, TimelockManager,
-        TokenService, TokenTransaction, Transfer, TransferId, TransferObserver, TransferService,
-        TransferStatus, TransferTokenOutput, TransferType, UnilateralExitService, Utxo,
+        TokenTransaction, Transfer, TransferId, TransferObserver, TransferService, TransferStatus,
+        TransferTokenOutput, TransferType, UnilateralExitService, Utxo,
     },
     session_manager::{InMemorySessionManager, SessionManager},
     signer::Signer,
     ssp::{ServiceProvider, SspTransfer, SspUserRequest},
     token::{
         InMemoryTokenOutputStore, SelectionStrategy, SynchronousTokenOutputService, TokenMetadata,
-        TokenOutputService, TokenOutputStore, TokenOutputWithPrevOut,
+        TokenOutputService, TokenOutputStore, TokenOutputWithPrevOut, TokenService,
     },
     tree::{
-        InMemoryTreeStore, SelectLeavesOptions, SynchronousTreeService, TargetAmounts, TreeNode,
+        InMemoryTreeStore, LeafOptimizer, OptimizationEvent, OptimizationEventHandler,
+        OptimizationProgress, SelectLeavesOptions, SynchronousTreeService, TargetAmounts, TreeNode,
         TreeNodeId, TreeService, TreeStore, select_leaves_by_target_amounts, with_reserved_leaves,
     },
     utils::paging::{PagingFilter, PagingResult},
@@ -701,14 +701,16 @@ impl SparkWallet {
         Ok(refund_tx)
     }
 
-    pub async fn generate_deposit_address(&self) -> Result<Address, SparkWalletError> {
+    pub async fn generate_deposit_address(
+        &self,
+    ) -> Result<spark::services::SingleUseDepositAddress, SparkWalletError> {
         let leaf_id = TreeNodeId::generate();
         let signing_public_key = self.signer.get_public_key_for_node(&leaf_id).await?;
         let address = self
             .deposit_service
             .generate_deposit_address(signing_public_key, &leaf_id)
             .await?;
-        Ok(address.address)
+        Ok(address)
     }
 
     pub async fn generate_static_deposit_address(&self) -> Result<Address, SparkWalletError> {
@@ -1811,17 +1813,10 @@ async fn claim_pending_transfers(
         .await;
 
     // Collect successful claims, log failures (best-effort).
-    // TransferAlreadyClaimed is treated as success - the leaves are already in the store.
     let mut successful_items = Vec::new();
 
     for (transfer, result) in claim_results {
-        let is_already_claimed = matches!(
-            &result,
-            Err(SparkWalletError::ServiceError(
-                ServiceError::TransferAlreadyClaimed
-            ))
-        );
-        if result.is_ok() || is_already_claimed {
+        if result.is_ok() {
             let mut completed = transfer;
             completed.status = TransferStatus::Completed;
             successful_items.push(completed);
@@ -1874,19 +1869,23 @@ async fn create_transfers(
         .filter_map(|t| t.spark_id.clone().map(|spark_id| (spark_id, t.clone())))
         .collect();
 
-    let htlc_requests = htlc_service
-        .query_htlc(
-            QueryHtlcFilter {
-                transfer_ids: preimage_swap_transfer_ids,
-                match_role: PreimageRequestRole::ReceiverAndSender,
-                identity_public_key: our_public_key,
-                status: None,
-                payment_hashes: Vec::new(),
-            },
-            None,
-        )
-        .await?
-        .items;
+    let htlc_requests = if preimage_swap_transfer_ids.is_empty() {
+        Vec::new()
+    } else {
+        htlc_service
+            .query_htlc(
+                QueryHtlcFilter {
+                    transfer_ids: preimage_swap_transfer_ids,
+                    match_role: PreimageRequestRole::ReceiverAndSender,
+                    identity_public_key: our_public_key,
+                    status: None,
+                    payment_hashes: Vec::new(),
+                },
+                None,
+            )
+            .await?
+            .items
+    };
 
     let htlc_requests_map: HashMap<String, PreimageRequestWithTransfer> = htlc_requests
         .into_iter()
@@ -2199,13 +2198,8 @@ impl BackgroundProcessor {
             ));
 
         trace!("Claiming transfer from event");
-        match claim_transfer(&transfer, &self.transfer_service, &self.tree_service).await {
-            Ok(_) => trace!("Claimed transfer from event"),
-            Err(SparkWalletError::ServiceError(ServiceError::TransferAlreadyClaimed)) => {
-                trace!("Transfer already claimed by another instance");
-            }
-            Err(e) => return Err(e),
-        }
+        claim_transfer(&transfer, &self.transfer_service, &self.tree_service).await?;
+        trace!("Claimed transfer from event");
 
         // Update transfer status before notifying listeners
         let mut claimed_transfer = transfer;
