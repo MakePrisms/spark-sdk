@@ -193,6 +193,30 @@ impl BreezSdk {
         Ok(self.sdk.get_payment(request.into()).await?.into())
     }
 
+    #[wasm_bindgen(js_name = "getLightningReceiveRequest")]
+    pub async fn get_lightning_receive_request(
+        &self,
+        request: GetLightningReceiveRequestRequest,
+    ) -> WasmResult<Option<GetLightningReceiveRequestResponse>> {
+        Ok(self
+            .sdk
+            .get_lightning_receive_request(request.into())
+            .await?
+            .map(Into::into))
+    }
+
+    #[wasm_bindgen(js_name = "getPaymentByInvoice")]
+    pub async fn get_payment_by_invoice(
+        &self,
+        request: GetPaymentByInvoiceRequest,
+    ) -> WasmResult<GetPaymentByInvoiceResponse> {
+        Ok(self
+            .sdk
+            .get_payment_by_invoice(request.into())
+            .await?
+            .into())
+    }
+
     #[wasm_bindgen(js_name = "claimDeposit")]
     pub async fn claim_deposit(
         &self,

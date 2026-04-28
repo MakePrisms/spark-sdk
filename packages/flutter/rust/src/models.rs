@@ -212,6 +212,33 @@ pub struct _GetPaymentResponse {
     pub payment: Payment,
 }
 
+#[frb(mirror(GetLightningReceiveRequestRequest))]
+pub struct _GetLightningReceiveRequestRequest {
+    pub request_id: String,
+}
+
+#[frb(mirror(GetLightningReceiveRequestResponse))]
+pub struct _GetLightningReceiveRequestResponse {
+    pub id: String,
+    pub status: LightningReceiveStatus,
+    pub invoice: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub transfer_id: Option<String>,
+    pub transfer_amount_sat: Option<u64>,
+    pub payment_preimage: Option<String>,
+}
+
+#[frb(mirror(GetPaymentByInvoiceRequest))]
+pub struct _GetPaymentByInvoiceRequest {
+    pub invoice: String,
+}
+
+#[frb(mirror(GetPaymentByInvoiceResponse))]
+pub struct _GetPaymentByInvoiceResponse {
+    pub payment: Option<Payment>,
+}
+
 #[frb(mirror(InputType))]
 pub enum _InputType {
     BitcoinAddress(BitcoinAddressDetails),
@@ -424,6 +451,35 @@ pub struct _ReceivePaymentRequest {
 pub struct _ReceivePaymentResponse {
     pub payment_request: String,
     pub fee: u128,
+    pub lightning_receive_details: Option<LightningReceiveDetails>,
+}
+
+#[frb(mirror(LightningReceiveDetails))]
+pub struct _LightningReceiveDetails {
+    pub receive_request_id: String,
+    pub status: LightningReceiveStatus,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[frb(mirror(LightningReceiveStatus))]
+pub enum _LightningReceiveStatus {
+    InvoiceCreated,
+    HtlcReceived,
+    TransferCreated,
+    TransferCreationFailed,
+    PaymentPreimagePending,
+    PaymentPreimageRecovered,
+    PaymentPreimageQueryingFailed,
+    PaymentPreimageRecoveringFailed,
+    TransferCanceled,
+    HtlcFailed,
+    LightningPaymentReceived,
+    TransferFailed,
+    TransferCompleted,
+    RefundSigningCommitmentsQueryingFailed,
+    RefundSigningFailed,
+    Unknown,
 }
 
 #[frb(mirror(RefundDepositRequest))]
@@ -508,6 +564,33 @@ pub struct _SendPaymentRequest {
 #[frb(mirror(SendPaymentResponse))]
 pub struct _SendPaymentResponse {
     pub payment: Payment,
+    pub lightning_send_details: Option<LightningSendDetails>,
+}
+
+#[frb(mirror(LightningSendDetails))]
+pub struct _LightningSendDetails {
+    pub send_request_id: String,
+    pub status: LightningSendStatus,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[frb(mirror(LightningSendStatus))]
+pub enum _LightningSendStatus {
+    Created,
+    UserTransferValidationFailed,
+    LightningPaymentInitiated,
+    LightningPaymentFailed,
+    LightningPaymentSucceeded,
+    PreimageProvided,
+    PreimageProvidingFailed,
+    TransferCompleted,
+    TransferFailed,
+    PendingUserSwapReturn,
+    UserSwapReturned,
+    UserSwapReturnFailed,
+    RequestValidated,
+    Unknown,
 }
 
 #[frb(mirror(SignMessageRequest))]

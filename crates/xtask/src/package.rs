@@ -816,12 +816,11 @@ fn generate_esm_wrapper(out_path: &Path) -> Result<()> {
     // Collect public export names (skip wasm-bindgen internals like __wbg_*)
     let mut exports: Vec<String> = Vec::new();
     for line in wasm_js_content.lines() {
-        if let Some(rest) = line.strip_prefix("module.exports.") {
-            if let Some(name) = rest.split_once(' ').map(|(n, _)| n) {
-                if !name.starts_with("__") {
-                    exports.push(name.to_string());
-                }
-            }
+        if let Some(rest) = line.strip_prefix("module.exports.")
+            && let Some(name) = rest.split_once(' ').map(|(n, _)| n)
+            && !name.starts_with("__")
+        {
+            exports.push(name.to_string());
         }
     }
     exports.sort();
