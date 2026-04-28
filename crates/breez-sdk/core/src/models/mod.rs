@@ -1167,6 +1167,73 @@ pub struct ReceivePaymentResponse {
     /// Fee to pay to receive the payment
     /// Denominated in sats or token base units
     pub fee: u128,
+    /// Details from the SSP lightning receive request (only set for Bolt11 invoices)
+    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+    pub lightning_receive_details: Option<LightningReceiveDetails>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct LightningReceiveDetails {
+    /// The SSP-assigned receive request ID
+    pub receive_request_id: String,
+    /// The receive request status
+    pub status: LightningReceiveStatus,
+    /// Timestamp when the receive request was created
+    pub created_at: i64,
+    /// Timestamp when the receive request was last updated
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum LightningReceiveStatus {
+    InvoiceCreated,
+    HtlcReceived,
+    TransferCreated,
+    TransferCreationFailed,
+    PaymentPreimagePending,
+    PaymentPreimageRecovered,
+    PaymentPreimageQueryingFailed,
+    PaymentPreimageRecoveringFailed,
+    TransferCanceled,
+    HtlcFailed,
+    LightningPaymentReceived,
+    TransferFailed,
+    TransferCompleted,
+    RefundSigningCommitmentsQueryingFailed,
+    RefundSigningFailed,
+    Unknown,
+}
+
+impl From<spark_wallet::LightningReceiveRequestStatus> for LightningReceiveStatus {
+    fn from(value: spark_wallet::LightningReceiveRequestStatus) -> Self {
+        use spark_wallet::LightningReceiveRequestStatus as S;
+        match value {
+            S::InvoiceCreated => LightningReceiveStatus::InvoiceCreated,
+            S::HtlcReceived => LightningReceiveStatus::HtlcReceived,
+            S::TransferCreated => LightningReceiveStatus::TransferCreated,
+            S::TransferCreationFailed => LightningReceiveStatus::TransferCreationFailed,
+            S::PaymentPreimagePending => LightningReceiveStatus::PaymentPreimagePending,
+            S::PaymentPreimageRecovered => LightningReceiveStatus::PaymentPreimageRecovered,
+            S::PaymentPreimageQueryingFailed => {
+                LightningReceiveStatus::PaymentPreimageQueryingFailed
+            }
+            S::PaymentPreimageRecoveringFailed => {
+                LightningReceiveStatus::PaymentPreimageRecoveringFailed
+            }
+            S::TransferCanceled => LightningReceiveStatus::TransferCanceled,
+            S::HtlcFailed => LightningReceiveStatus::HtlcFailed,
+            S::LightningPaymentReceived => LightningReceiveStatus::LightningPaymentReceived,
+            S::TransferFailed => LightningReceiveStatus::TransferFailed,
+            S::TransferCompleted => LightningReceiveStatus::TransferCompleted,
+            S::RefundSigningCommitmentsQueryingFailed => {
+                LightningReceiveStatus::RefundSigningCommitmentsQueryingFailed
+            }
+            S::RefundSigningFailed => LightningReceiveStatus::RefundSigningFailed,
+            S::Unknown => LightningReceiveStatus::Unknown,
+        }
+    }
 }
 
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
@@ -1399,6 +1466,63 @@ pub struct SendPaymentRequest {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct SendPaymentResponse {
     pub payment: Payment,
+    /// Details from the SSP lightning send request (only set for Bolt11 invoices sent via Lightning)
+    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+    pub lightning_send_details: Option<LightningSendDetails>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct LightningSendDetails {
+    /// The SSP-assigned send request ID
+    pub send_request_id: String,
+    /// The send request status
+    pub status: LightningSendStatus,
+    /// Timestamp when the send request was created
+    pub created_at: i64,
+    /// Timestamp when the send request was last updated
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum LightningSendStatus {
+    Created,
+    UserTransferValidationFailed,
+    LightningPaymentInitiated,
+    LightningPaymentFailed,
+    LightningPaymentSucceeded,
+    PreimageProvided,
+    PreimageProvidingFailed,
+    TransferCompleted,
+    TransferFailed,
+    PendingUserSwapReturn,
+    UserSwapReturned,
+    UserSwapReturnFailed,
+    RequestValidated,
+    Unknown,
+}
+
+impl From<spark_wallet::LightningSendStatus> for LightningSendStatus {
+    fn from(value: spark_wallet::LightningSendStatus) -> Self {
+        use spark_wallet::LightningSendStatus as S;
+        match value {
+            S::Created => LightningSendStatus::Created,
+            S::UserTransferValidationFailed => LightningSendStatus::UserTransferValidationFailed,
+            S::LightningPaymentInitiated => LightningSendStatus::LightningPaymentInitiated,
+            S::LightningPaymentFailed => LightningSendStatus::LightningPaymentFailed,
+            S::LightningPaymentSucceeded => LightningSendStatus::LightningPaymentSucceeded,
+            S::PreimageProvided => LightningSendStatus::PreimageProvided,
+            S::PreimageProvidingFailed => LightningSendStatus::PreimageProvidingFailed,
+            S::TransferCompleted => LightningSendStatus::TransferCompleted,
+            S::TransferFailed => LightningSendStatus::TransferFailed,
+            S::PendingUserSwapReturn => LightningSendStatus::PendingUserSwapReturn,
+            S::UserSwapReturned => LightningSendStatus::UserSwapReturned,
+            S::UserSwapReturnFailed => LightningSendStatus::UserSwapReturnFailed,
+            S::RequestValidated => LightningSendStatus::RequestValidated,
+            S::Unknown => LightningSendStatus::Unknown,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1503,6 +1627,35 @@ pub struct GetPaymentRequest {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GetPaymentResponse {
     pub payment: Payment,
+}
+
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetLightningReceiveRequestRequest {
+    pub request_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetLightningReceiveRequestResponse {
+    pub id: String,
+    pub status: LightningReceiveStatus,
+    pub invoice: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub transfer_id: Option<String>,
+    pub transfer_amount_sat: Option<u64>,
+    pub payment_preimage: Option<String>,
+}
+
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetPaymentByInvoiceRequest {
+    pub invoice: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct GetPaymentByInvoiceResponse {
+    pub payment: Option<Payment>,
 }
 
 #[cfg_attr(feature = "uniffi", uniffi::export(callback_interface))]
